@@ -150,10 +150,10 @@ class LedTest:
     def run():
         hue = 0
         while LedTest.running:
-            LedTest.handle.fill((hue, 1, 0.1))
+            LedTest.handle.fill((hue, 1, 0.3), 3)
             LedTest.handle.show()
-            hue = (hue + 5) % 360
-            sleep(0.05)
+            hue = (hue + 1) % 360
+            sleep(0.1)
 
 pulse_handle = LedHandle(is_overrider=True)
 

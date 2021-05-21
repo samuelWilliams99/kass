@@ -126,3 +126,5 @@ def trigger_callbacks(msg):
 
 def add_callback(f):
     _midi_event_callbacks.append(f)
+
+add_callback(settings.NoteSetting.midi_callback)

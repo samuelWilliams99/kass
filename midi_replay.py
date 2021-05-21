@@ -166,7 +166,7 @@ def _save():
 	first_msg = next(iter(_midi_history), None)
 
 	if not first_msg:
-		return False
+		return
 
 	first_msg.time = 0
 

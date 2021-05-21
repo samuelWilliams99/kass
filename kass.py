@@ -9,6 +9,7 @@ import led
 import greeting
 import color_handler
 import helper
+import octaves
 from gpiozero import Button
 
 screen.init()
@@ -35,17 +36,25 @@ _pedal_pos = 0
 
 class LedData:
     def __init__(self):
-        self.alpha = 0.0
-        self.start_alpha = 0.0
+        self.value = 0.0
+        self.start_value = 0.0
         self.key_down = False
         self.hue = 0.0
         self.sat = 0.0
+        self.time_down = None
 
-    def key_press(self, hue, sat, alpha):
-        self.alpha = alpha
-        self.start_alpha = alpha
+    def set_key_down(self, down):
+        self.key_down = down
+        if down:
+            self.time_down = time()
+        else:
+            self.time_down = None
+
+    def set_hsv(self, hue, sat, val):
         self.hue = hue
         self.sat = sat
+        self.value = val
+        self.start_value = val
 
 led_data_list = [LedData() for _ in range(led.count())]
 
@@ -62,42 +71,47 @@ def midi_handler(msg):
     vel = msg.velocity / 127.0
     key_down = vel != 0
 
-    led_data.key_down = key_down
+    led_data.set_key_down(key_down)
 
     if key_down:
         rescaled_vel = helper.renormalize(vel, 0.3, 0.65, 0, 1)
         
         (hue, sat, val) = color_handler.get_hsv(note_index, rescaled_vel)
 
-        led_data.key_press(hue, sat, vel * val)
+        if val == 0: return
+
+        octaves.key_press(note_index, vel * val, led_data_list)
+
+        led_data.set_hsv(hue, sat, vel * val)
         if note_index > 0:
-            led_data_list[note_index-1].key_press(hue, sat, vel * val * 0.5)
+            led_data_list[note_index-1].set_hsv(hue, sat, vel * val * 0.5)
         if note_index < 87:
-            led_data_list[note_index+1].key_press(hue, sat, vel * val * 0.5)
+            led_data_list[note_index+1].set_hsv(hue, sat, vel * val * 0.5)
 
 midi.add_callback(midi_handler)
 
 def main():
     while True:
+        menu.loop()
         color_handler.loop()
         midi.loop()
 
         for i in range(88):
             led_data = led_data_list[i]
-            if led_data.alpha == 0:
+            if led_data.value == 0:
                 led_handle[i] = (led_data.hue, 1, 0)
                 continue
 
             decay_rate_idx = _pedal_pos
             if led_data.key_down:
                 decay_rate_idx = 2
-            if led_data.alpha > led_data.start_alpha * 0.6:
+            if led_data.value > led_data.start_value * 0.6:
                 decay_rate_idx = 3
 
             decay_rate = [24, 4, 1, 10][decay_rate_idx]
-            led_data.alpha = max(0, led_data.alpha - decay_rate/255.0)
+            led_data.value = max(0, led_data.value - decay_rate/255.0)
 
-            led_handle[i] = (led_data.hue, led_data.sat, led_data.alpha)
+            led_handle[i] = (led_data.hue, led_data.sat, led_data.value)
         led_handle.show()
 
         sleep(0.01)

@@ -3,9 +3,9 @@ import menu
 import json
 import math
 import led
+import os
 from time import sleep
 from sys import exit
-import os
 
 _save_file_path = "/home/pi/python/midi_lights_save.txt"
 
@@ -166,6 +166,35 @@ class TimeSetting(NumberSetting):
     def get_display_data(self):
         m, s = divmod(self.value, 60)
         return f'{m:02d}:{s:02d}'
+
+class NoteSetting(Setting):
+    @staticmethod
+    def midi_callback(msg):
+        if msg.type != "note_on": return
+        setting = NoteSetting.active_setting
+        if setting:
+            setting.value = msg.note - 21
+            if setting.change_callback: setting.change_callback(setting.value)
+            menu.leave_sub_menu()
+
+    def __init__(self, name, value):
+        self.value = value
+        self.should_save = True
+        NoteSetting.active_setting = None
+        super(NoteSetting, self).__init__(name)
+
+    def on_enter(self):
+        NoteSetting.active_setting = self
+        self.update_display()
+
+    def on_leave(self):
+        NoteSetting.active_setting = None
+
+    def get_display_data(self):
+        if NoteSetting.active_setting:
+            return "Press Note"
+        else:
+            return str(self.value)
 
 class BoolSetting(Setting):
     def __init__(self, name, value, off_message="FALSE", on_message="TRUE"):

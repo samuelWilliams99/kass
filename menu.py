@@ -7,7 +7,7 @@ _sub_menus = []
 _sub_menu_index = -1
 _temp_sub_menu = []
 
-_btn = Button(17, hold_time=0.8, bounce_time=0.05)
+_btn = Button(17, hold_time=1, bounce_time=0.01)
 
 _button_held = False
 
@@ -98,10 +98,22 @@ def _update_menu_screen():
         select_text = _sub_menus[_sub_menu_index].get_select_text()
     screen.line2(select_text, True)
 
-_btn.when_pressed = _button_pressed
-_btn.when_released = _button_released
-_btn.when_held = _when_held
-analog.set_callback(_change_value)
+_call_queue = []
+
+def _delay_call(f):
+    def func(*args):
+        _call_queue.append((f, args))
+    return func
+
+def loop():
+    while len(_call_queue) > 0:
+        (f, args) = _call_queue.pop(0)
+        f(*args)
+
+_btn.when_pressed = _delay_call(_button_pressed)
+_btn.when_released = _delay_call(_button_released)
+_btn.when_held = _delay_call(_when_held)
+analog.set_callback(_delay_call(_change_value))
 
 def init():
     analog.init()
