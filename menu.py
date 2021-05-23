@@ -45,14 +45,11 @@ def _change_value(v):
 
     if not screen.is_awake():
         if diff <= 0.1: return
-        screen.wake()
-        return
     else:
         if diff <= 0.01: return
 
-    # TODO: bad fix make better
-    screen.wake()
     _old_val = v
+    if screen.wake(): return
 
     if len(_temp_sub_menu) > 0:
         _call_event("on_value_change", v)

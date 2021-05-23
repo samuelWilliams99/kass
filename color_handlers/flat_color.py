@@ -10,8 +10,8 @@ class FlatColor:
 
     @staticmethod
     def get_hsv(note, vel):
-        return FlatColor.sub_settings.get_value("Color")
+        return FlatColor.get_value("Color", return_hsv=True)
 
 color_handler.add(FlatColor)
 
-FlatColor.add_setting(settings.ColorSetting("Color", (170, 1, 1), is_hsv=True, return_hsv=True))
+FlatColor.add_setting(settings.ColorSetting("Color", (170, 1, 1), is_hsv=True))

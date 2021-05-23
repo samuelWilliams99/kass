@@ -16,7 +16,7 @@ class LedGroup:
         self.last_note_time = time()
         self.vels = [vel]
         self.id = LedGroup.id_counter
-        self.hue = uniform(0, 360) if LedGroup.sub_settings.get_value("Random Hue") else LedGroup.sub_settings.get_value("Fixed Hue")
+        self.hue = uniform(0, 360) if LedGroup.get_value("Random Hue") else LedGroup.get_value("Fixed Hue")
         LedGroup.id_counter += 1
         LedGroup.groups.append(self)
 
@@ -24,12 +24,12 @@ class LedGroup:
         self.note_average = sum(self.notes) / len(self.notes)
 
     def try_add(self, note, vel):
-        if abs(self.note_average - note) > LedGroup.sub_settings.get_value("Group Range"):
+        if abs(self.note_average - note) > LedGroup.get_value("Group Range"):
             return
         self.last_note_time = time()
         self.notes.append(note)
         self.vels.append(vel)
-        if len(self.vels) > LedGroup.sub_settings.get_value("History Length"):
+        if len(self.vels) > LedGroup.get_value("History Length"):
             self.vels.pop(0)
             self.notes.pop(0)
         self.update_note_average()
@@ -37,7 +37,7 @@ class LedGroup:
         return sum(self.vels) / len(self.vels)
 
     def remove_check(self):
-        if time() - self.last_note_time > LedGroup.sub_settings.get_value("Group Timeout"):
+        if time() - self.last_note_time > LedGroup.get_value("Group Timeout"):
             LedGroup.groups.remove(self)
 
     @staticmethod
@@ -59,7 +59,7 @@ class LedGroup:
 
     @staticmethod
     def calc_hue(vel, hue):
-        if LedGroup.sub_settings.get_value("Show Velocity"):
+        if LedGroup.get_value("Show Velocity"):
             return (hue + (vel * 120)) % 360
         else:
             return hue

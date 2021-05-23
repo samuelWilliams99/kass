@@ -5,6 +5,7 @@ import menu
 import screen
 import settings
 import math
+import helper
 from time import sleep
 
 _NUM_LEDS = 88
@@ -65,7 +66,7 @@ class LedHandle:
 
     def to_rgb(self, col):
         if self.is_hsv:
-            return hsv_to_rgb(col)
+            return helper.hsv_to_rgb(col)
         return col
 
     def can_assign(self):
@@ -160,41 +161,6 @@ pulse_handle = LedHandle(is_overrider=True)
 def pulse(col):
     if pulse_handle.enable():
         pulse_handle.pulse(col, lambda: pulse_handle.disable())
-
-# i didnt write this, apparently its faster than other solutions, and we do love speed
-def hsv_to_rgb(col):
-    (h, s, v) = col
-    h/=360.0
-    if s == 0.0: v*=255; return (v, v, v)
-    i = int(h*6.) # XXX assume int() truncates!
-    f = (h*6.)-i; p,q,t = int(255*(v*(1.-s))), int(255*(v*(1.-s*f))), int(255*(v*(1.-s*(1.-f)))); v*=255; i%=6
-    if i == 0: return (v, t, p)
-    if i == 1: return (q, v, p)
-    if i == 2: return (p, v, t)
-    if i == 3: return (p, q, v)
-    if i == 4: return (t, p, v)
-    if i == 5: return (v, p, q)
-
-def rgb_to_hsv(col):
-    (r, g, b) = col
-    r, g, b = r/255.0, g/255.0, b/255.0
-    mx = max(r, g, b)
-    mn = min(r, g, b)
-    df = mx-mn
-    if mx == mn:
-        h = 0
-    elif mx == r:
-        h = (60 * ((g-b)/df) + 360) % 360
-    elif mx == g:
-        h = (60 * ((b-r)/df) + 120) % 360
-    elif mx == b:
-        h = (60 * ((r-g)/df) + 240) % 360
-    if mx == 0:
-        s = 0
-    else:
-        s = (df/mx)
-    v = mx
-    return (h, s, v)
 
 def init():
     global _leds

@@ -32,7 +32,11 @@ led_handle.enable()
 _btn = Button(3, hold_time=0.8, bounce_time=0.05)
 _btn.when_pressed = sys.exit
 
-_pedal_pos = 0
+_pedal_controls = [64, 66, 67]
+
+_pedal_poses = [0, 0, 0]
+
+_global_hue = 0
 
 class LedData:
     def __init__(self):
@@ -59,9 +63,11 @@ class LedData:
 led_data_list = [LedData() for _ in range(led.count())]
 
 def midi_handler(msg):
-    global _pedal_pos
-    if msg.type == "control_change" and msg.control == 64:
-        _pedal_pos = msg.value // 60
+    if msg.type == "control_change" and msg.control in _pedal_controls:
+        pedal_pos = msg.value // 60
+        pedal_idx = _pedal_controls.index(msg.control)
+        color_handler.set_pedal(pedal_idx, pedal_pos)
+        _pedal_poses[pedal_idx] = pedal_pos
 
     if msg.type != "note_on": return
     note_index = msg.note - 21 # Bottom A is note 21
@@ -79,6 +85,10 @@ def midi_handler(msg):
         (hue, sat, val) = color_handler.get_hsv(note_index, rescaled_vel)
 
         if val == 0: return
+
+        if color_handler.get_global_hue():
+            global _global_hue
+            _global_hue = hue
 
         octaves.key_press(note_index, vel * val, led_data_list)
 
@@ -102,7 +112,7 @@ def main():
                 led_handle[i] = (led_data.hue, 1, 0)
                 continue
 
-            decay_rate_idx = _pedal_pos
+            decay_rate_idx = _pedal_poses[0]
             if led_data.key_down:
                 decay_rate_idx = 2
             if led_data.value > led_data.start_value * 0.6:
@@ -111,7 +121,12 @@ def main():
             decay_rate = [24, 4, 1, 10][decay_rate_idx]
             led_data.value = max(0, led_data.value - decay_rate/255.0)
 
-            led_handle[i] = (led_data.hue, led_data.sat, led_data.value)
+            if color_handler.get_global_hue():
+                hue = _global_hue
+            else:
+                hue = led_data.hue
+
+            led_handle[i] = (hue, led_data.sat, led_data.value)
         led_handle.show()
 
         sleep(0.01)

@@ -5,12 +5,17 @@ import settings
 import json
 
 _handler_save_path = "/home/pi/python/handler_data.txt"
+pedals = [0, 0, 0]
 
 class HandlerSelector:
     name = "COLOR TYPE"
     handlers = []
     force_next_setting = False
     handler_data = {"index": 0}
+
+    @staticmethod
+    def get_global_hue():
+        return HandlerSelector.get_handler().global_hue
 
     @staticmethod
     def get_select_text():
@@ -20,6 +25,9 @@ class HandlerSelector:
     def add(handler):
         handler.sub_settings = ColorHandlerSettingHandler(handler.name, "")
         handler.add_setting = lambda setting: handler.sub_settings.add(setting)
+        handler.get_value = lambda name, **kwargs: handler.sub_settings.get_value(name, **kwargs)
+        if not hasattr(handler, "global_hue"):
+            handler.global_hue = False
         HandlerSelector.handlers.append(handler)
 
     @staticmethod
@@ -101,7 +109,13 @@ def add(handler):
 def loop():
     HandlerSelector.loop()
 
+def get_global_hue():
+    return HandlerSelector.get_global_hue()
+
 def get_hsv(note_index, vel):
     return HandlerSelector.get_hsv(note_index, vel)
+
+def set_pedal(pedal_idx, pedal):
+    pedals[pedal_idx] = pedal
 
 import color_handlers

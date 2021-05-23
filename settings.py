@@ -4,6 +4,7 @@ import json
 import math
 import led
 import os
+import helper
 from time import sleep
 from sys import exit
 
@@ -61,10 +62,10 @@ class SettingHandler:
     def on_button_long_pressed(self):
         menu.leave_sub_menu()
 
-    def get_value(self, name):
+    def get_value(self, name, **kwargs):
         setting = self.settings.get(name)
         if setting == None: return
-        return setting.get_use_value()
+        return setting.get_use_value(**kwargs)
 
     def get_current(self):
         return self.settings[self.setting_names[self.setting_index]]
@@ -168,6 +169,7 @@ class TimeSetting(NumberSetting):
         return f'{m:02d}:{s:02d}'
 
 class NoteSetting(Setting):
+    note_names = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]
     @staticmethod
     def midi_callback(msg):
         if msg.type != "note_on": return
@@ -194,7 +196,9 @@ class NoteSetting(Setting):
         if NoteSetting.active_setting:
             return "Press Note"
         else:
-            return str(self.value)
+            note_str = NoteSetting.note_names[self.value % 12]
+            octave_num = int((self.value + 9) / 12)
+            return note_str + str(octave_num) + " (" + str(self.value) + ")"
 
 class BoolSetting(Setting):
     def __init__(self, name, value, off_message="FALSE", on_message="TRUE"):
@@ -266,15 +270,15 @@ class SpecialActionSetting(Setting):
             self.message_mode = 0
         menu.leave_sub_menu()
 
+# Cache rgb is is_hsv, otherwise cache hsv
 class ColorSetting(SettingHandler, Setting):
     led_handle = led.LedHandle(False, True)
-    def __init__(self, name, value, is_hsv=False, allow_hsv_change=True, return_hsv=False):
+    def __init__(self, name, value, is_hsv=False, allow_hsv_change=True):
         self.value = value
         self.is_hsv = is_hsv
         self.should_save = True
         self.active = False
         self.allow_hsv_change = allow_hsv_change
-        self.return_hsv = return_hsv
 
         SettingHandler.__init__(self, name, "")
 
@@ -292,11 +296,11 @@ class ColorSetting(SettingHandler, Setting):
     def get_save_value(self):
         return (self.value, self.is_hsv)
 
-    def get_use_value(self):
-        if self.is_hsv and not self.return_hsv:
-            return led.hsv_to_rgb(self.value)
-        if not self.is_hsv and self.return_hsv:
-            return led.rgb_to_hsv(self.value)
+    def get_use_value(self, return_hsv=False):
+        if self.is_hsv and not return_hsv:
+            return helper.hsv_to_rgb(self.value)
+        if not self.is_hsv and return_hsv:
+            return helper.rgb_to_hsv(self.value)
         return self.value
 
     def add_value_setting(self, i, setting):
@@ -321,7 +325,7 @@ class ColorSetting(SettingHandler, Setting):
     def update_leds(self):
         value = self.value
         if self.is_hsv:
-            value = led.hsv_to_rgb(self.value)
+            value = helper.hsv_to_rgb(self.value)
         ColorSetting.led_handle.fill(value, 3)
         ColorSetting.led_handle.show()
 
@@ -342,10 +346,10 @@ class ColorSetting(SettingHandler, Setting):
         if new_hsv == self.is_hsv: return
         self.is_hsv = new_hsv
         if self.is_hsv:
-            (h, s, v) = led.rgb_to_hsv(self.value)
+            (h, s, v) = helper.rgb_to_hsv(self.value)
             self.value = (int(h), s, v)
         else:
-            self.value = tuple(map(int, led.hsv_to_rgb(self.value)))
+            self.value = tuple(map(int, helper.hsv_to_rgb(self.value)))
 
         self.setup_settings()
 
@@ -365,8 +369,8 @@ class ColorSetting(SettingHandler, Setting):
 
 main_settings = SettingHandler("Settings", _save_file_path)
 
-def get_value(name):
-    return main_settings.get_value(name)
+def get_value(name, **kwargs):
+    return main_settings.get_value(name, **kwargs)
 
 def shutdown():
     screen.clear()

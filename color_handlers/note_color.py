@@ -1,5 +1,6 @@
 import settings
 import color_handler
+import helper
 
 class NoteColor:
     name = "Note Color"
@@ -10,26 +11,24 @@ class NoteColor:
 
     @staticmethod
     def get_hsv(note, vel):
-        (start_hue, start_sat, start_val) = NoteColor.sub_settings.get_value("Start Color")
-        (end_hue, end_sat, end_val) = NoteColor.sub_settings.get_value("End Color")
-        increasing = NoteColor.sub_settings.get_value("Increasing")
-        loops = NoteColor.sub_settings.get_value("Extra Loops")
+        hsv_lerp = NoteColor.get_value("Lerp Type")
 
-        if increasing and end_hue < start_hue: end_hue += 360
-        if not increasing and start_hue < end_hue: start_hue += 360
-
-        end_hue += (1 if increasing else -1) * loops * 360
+        start_col = NoteColor.get_value("Start Color", return_hsv=hsv_lerp)
+        end_col = NoteColor.get_value("End Color", return_hsv=hsv_lerp)
+        increasing = NoteColor.get_value("Increasing")
+        loops = NoteColor.get_value("Extra Loops")
 
         prog = (note / 87.0)
-        hue = (start_hue + prog * (end_hue - start_hue)) % 360
-        sat = (start_sat + prog * (end_sat - start_sat))
-        val = (start_val + prog * (end_val - start_val))
 
-        return (hue, sat, val)
+        if hsv_lerp:
+            return helper.hsv_lerp(start_col, end_col, prog, increasing, loops)
+        else:
+            return helper.rgb_to_hsv(helper.rgb_lerp(start_col, end_col, prog))
 
 color_handler.add(NoteColor)
 
-NoteColor.add_setting(settings.ColorSetting("Start Color", (0, 1, 1), is_hsv=True, return_hsv=True))
-NoteColor.add_setting(settings.ColorSetting("End Color", (360, 1, 1), is_hsv=True, return_hsv=True))
+NoteColor.add_setting(settings.ColorSetting("Start Color", (0, 1, 1), is_hsv=True))
+NoteColor.add_setting(settings.ColorSetting("End Color", (360, 1, 1), is_hsv=True))
+NoteColor.add_setting(settings.BoolSetting("Lerp Type", True, "RGB", "HSV"))
 NoteColor.add_setting(settings.BoolSetting("Increasing", True))
 NoteColor.add_setting(settings.IntSetting("Extra Loops", 0, 10))
