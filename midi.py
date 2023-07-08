@@ -10,8 +10,13 @@ _input_port = None
 _output_port = None
 _midi_event_callbacks = []
 _midi_status_active = False
+_midi_connect_callbacks = []
+_midi_disconnect_callbacks = []
 
 settings.add(settings.BoolSetting("Lights on Send", True))
+
+def set_local(v):
+    send(mido.Message("control_change", channel=0, control=122, value=127 if v else 0))    
 
 class MidiStatus():
     name = "MIDI STATUS"
@@ -79,13 +84,18 @@ def on_connect():
     global _connected
     if _connected: return
     _connected = True
+    set_local(True)
     led.pulse((0, 10, 0))
+    for f in _midi_connect_callbacks:
+        f()
 
 def on_disconnect():
     global _connected
     if not _connected: return
     _connected = False
     led.pulse((10, 0, 0))
+    for f in _midi_disconnect_callbacks:
+        f()
 
 def stop():
     if _input_port:
@@ -93,7 +103,7 @@ def stop():
     if _output_port:
         _output_port.close()
 
-def send(msg):
+def send(msg, should_trigger=True):
     global _output_port
     if _output_port == None:
         return
@@ -103,8 +113,9 @@ def send(msg):
         on_disconnect()
         return
 
-    if settings.get_value("Lights on Send"):
-        trigger_callbacks(msg)
+    msg = msg.copy()
+    if settings.get_value("Lights on Send") and should_trigger:
+        trigger_callbacks(msg, True)
     _output_port.send(msg)
 
 def loop():
@@ -120,11 +131,18 @@ def loop():
     for msg in _input_port.iter_pending():
         trigger_callbacks(msg)
 
-def trigger_callbacks(msg):
-    for f in _midi_event_callbacks:
+def trigger_callbacks(msg, from_send=False):
+    for (f, include_send) in _midi_event_callbacks:
+        if from_send and not include_send: continue
         f(msg)
 
-def add_callback(f):
-    _midi_event_callbacks.append(f)
+def add_callback(f, include_send=False):
+    _midi_event_callbacks.append((f, include_send))
+
+def add_connect_callback(f):
+    _midi_connect_callbacks.append(f)
+
+def add_disconnect_callback(f):
+    _midi_disconnect_callbacks.append(f)
 
 add_callback(settings.NoteSetting.midi_callback)

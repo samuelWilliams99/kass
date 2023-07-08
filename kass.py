@@ -4,6 +4,7 @@ import screen
 import menu
 import settings
 import midi_replay
+import looper
 import midi
 import led
 import greeting
@@ -71,6 +72,7 @@ def midi_handler(msg):
 
     if msg.type != "note_on": return
     note_index = msg.note - 21 # Bottom A is note 21
+    if note_index < 0 or note_index > 87: return
 
     led_data = led_data_list[note_index]
 
@@ -98,7 +100,7 @@ def midi_handler(msg):
         if note_index < 87:
             led_data_list[note_index+1].set_hsv(hue, sat, vel * val * 0.5)
 
-midi.add_callback(midi_handler)
+midi.add_callback(midi_handler, True)
 
 def main():
     while True:

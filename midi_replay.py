@@ -39,7 +39,7 @@ class Replay:
 
 	@staticmethod		
 	def init():
-		midi.add_callback(_midi_handler)
+		midi.add_callback(_midi_handler, True)
 
 class ReplayViewer:
 	name = "View Replay"
